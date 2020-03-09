@@ -3,23 +3,27 @@ from flask import Flask, request, redirect, url_for, render_template
 from flask_socketio import SocketIO, emit
 from collections import deque
 
-import datetime
+
+import datetime, json
 
 app = Flask(__name__)
 socketio = SocketIO(app)
 
 queue = deque() 
 active_people = set()
-help_days = dict()
-
-SECRET_PASSWORD = "ece391"
 N_HELPED = "dayfile"
-cur_helped = 0
-today = datetime.datetime.today().strftime('%d-%m-%Y')
 
 def get_helped():
     with open(N_HELPED, "r") as f:
-        return dict(f.read()) 
+        return json.loads(f.read()) 
+
+help_days = get_helped()
+
+SECRET_PASSWORD = "ece391"
+admins = set() # session ids
+
+cur_helped = 0
+today = datetime.datetime.today().strftime('%d-%m-%Y')
 
 def write_helped():
     global cur_helped, help_days, today
@@ -31,6 +35,11 @@ def write_helped():
     help_days[today] = cur_helped
     with open(N_HELPED, "w") as f:
         f.write(str(help_days))
+
+def admin_broadcast():
+    for admin in admins:
+        continue
+        emit('admin_push', {'data' : len(queue)}, room=admin)
 
 @app.route('/')
 def index():
@@ -47,15 +56,27 @@ def add_queue(message):
     if entry not in active_people:
         queue.append(entry)
         active_people.add(entry)
+    
+    if len(admins) > 0:
+        admin_broadcast()
+
     print(queue)
     emit('queue_recv', {'data': list(queue)}, broadcast=True)
 
 @socketio.on('queue_dequeue', namespace='/')
 def rm_queue(message):
+    global admins
     if message == SECRET_PASSWORD:
         if len(queue) > 0:
             active_people.remove(queue.popleft())
             write_helped()
+            if request.sid not in admins:
+                admins.add(request.sid)
+        if len(queue) == 0:
+            # becomes empty, reset title to blank
+            admin_broadcast()
+           
+            
         emit('queue_recv', {'data': list(queue)}, broadcast=True)
 
 
