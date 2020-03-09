@@ -1,0 +1,54 @@
+<html>
+
+	<head>
+		<title>discount 391 queue</title>
+	</head>
+
+	<body>
+		<h1>discount 391 queue</h1>
+		because the other lab is full <br>
+		
+		<img src="buftux.jpg" alt="TUX" width="300" height="400"/><br>
+
+
+		top: <br>
+		
+		<form method="post" id="queueForm">
+			<label for="name">Name:</label><br>
+			<input type="text" id="name"><br>
+			<input id="submit" type="submit" value="Submit">
+		</form>
+		<div id="queueArea">
+			<ol id="queue"></ol>
+		</div>
+	</body>
+
+	<input id="adminPw" type="password" placeholder="Admin Password"></input>
+	<button id="dequeueButton">De-queue</button>
+
+	<script
+		src="https://code.jquery.com/jquery-3.4.1.min.js"
+		integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+		crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
+
+	<script>
+		$(document).ready(function(){
+			var socket = io.connect('http://' + document.domain + ':' + location.port + '/');
+			socket.on('queue_recv', function(msg) {
+				console.log(msg['data'])
+				var queueEntries = msg['data'].map(name => `<li><p>${name}</p></li>`).join('\n');
+				$('#queue').html(queueEntries);
+			});
+			$('form').submit(function(event) {
+				event.preventDefault();
+				socket.emit('queue_update', {data: $('#name').val()});
+				return false;
+			});
+			$('#dequeueButton').click(function(event) {
+				socket.emit('queue_dequeue', $('#adminPw').val());
+			});
+		});
+	</script>
+
+</html>
