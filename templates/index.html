@@ -8,7 +8,6 @@
 		<h1>discount 391 queue</h1>
 		because the other lab is full <br>
 		
-		<img src="buftux.jpg" alt="TUX" width="300" height="400"/><br>
 
 
 		top: <br>
@@ -39,6 +38,14 @@
 				console.log(msg['data'])
 				var queueEntries = msg['data'].map(name => `<li><p>${name}</p></li>`).join('\n');
 				$('#queue').html(queueEntries);
+			});
+			socket.on('admin_push', function(msg) {
+				console.log(msg['data']);
+				if (msg['data'] != 0) {
+					document.title = "(" + msg['data'].toString() + ") discount 391 queue";
+				} else {
+					document.title = "discount 391 queue";
+				}
 			});
 			$('form').submit(function(event) {
 				event.preventDefault();

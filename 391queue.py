@@ -34,11 +34,11 @@ def write_helped():
     cur_helped += 1
     help_days[today] = cur_helped
     with open(N_HELPED, "w") as f:
-        f.write(str(help_days))
+        json.dump(help_days, f)
+
 
 def admin_broadcast():
     for admin in admins:
-        continue
         emit('admin_push', {'data' : len(queue)}, room=admin)
 
 @app.route('/')
@@ -52,7 +52,8 @@ def sync_queue():
 @socketio.on('queue_update', namespace='/')
 def add_queue(message):
     global active_people
-    entry = message['data'] 
+    entry = message['data']
+    print(request.sid) 
     if entry not in active_people:
         queue.append(entry)
         active_people.add(entry)
@@ -71,11 +72,9 @@ def rm_queue(message):
             active_people.remove(queue.popleft())
             write_helped()
             if request.sid not in admins:
-                admins.add(request.sid)
-        if len(queue) == 0:
-            # becomes empty, reset title to blank
-            admin_broadcast()
-           
+                admins.add(str(request.sid))
+            print(admins)
+            admin_broadcast()  
             
         emit('queue_recv', {'data': list(queue)}, broadcast=True)
 
