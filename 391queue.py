@@ -3,24 +3,34 @@ from flask import Flask, request, redirect, url_for, render_template
 from flask_socketio import SocketIO, emit
 from collections import deque
 
+import datetime
+
 app = Flask(__name__)
 socketio = SocketIO(app)
 
 queue = deque() 
+active_people = set()
+help_days = dict()
 
-SECRET_PASSWORD = "7N!N(~7oKJjE"
-N_HELPED = "helpfile"
+SECRET_PASSWORD = "ece391"
+N_HELPED = "dayfile"
 cur_helped = 0
+today = datetime.datetime.today().strftime('%d-%m-%Y')
 
 def get_helped():
     with open(N_HELPED, "r") as f:
-        return int(f.read())
+        return dict(f.read()) 
 
 def write_helped():
-    global cur_helped
+    global cur_helped, help_days, today
+    today = datetime.datetime.today().strftime('%d-%m-%Y')
+    if today not in help_days:
+        help_days[today] = 0
+        cur_helped = 0
     cur_helped += 1
+    help_days[today] = cur_helped
     with open(N_HELPED, "w") as f:
-        f.write(str(cur_helped))
+        f.write(str(help_days))
 
 @app.route('/')
 def index():
@@ -32,8 +42,11 @@ def sync_queue():
 
 @socketio.on('queue_update', namespace='/')
 def add_queue(message):
+    global active_people
     entry = message['data'] 
-    queue.append(entry)
+    if entry not in active_people:
+        queue.append(entry)
+        active_people.add(entry)
     print(queue)
     emit('queue_recv', {'data': list(queue)}, broadcast=True)
 
@@ -41,12 +54,11 @@ def add_queue(message):
 def rm_queue(message):
     if message == SECRET_PASSWORD:
         if len(queue) > 0:
-            queue.popleft()
+            active_people.remove(queue.popleft())
             write_helped()
         emit('queue_recv', {'data': list(queue)}, broadcast=True)
 
 
 
 if __name__ == "__main__":
-    cur_helped = get_helped()
     socketio.run(app, host="0.0.0.0")
